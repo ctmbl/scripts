@@ -1,2 +1,2 @@
-# scripts
-A collection of scripts I may use
+# Scripts
+Various script I use on my Manjaro distribution
