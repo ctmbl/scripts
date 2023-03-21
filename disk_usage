@@ -1,0 +1,24 @@
+#!/bin/bash
+
+DEPENDENCIES=(
+	notify-send
+	df
+)
+
+check_dependencies () {
+	for package in ${DEPENDENCIES[@]}; do
+		if [ ! $(which $package) ]; then
+			echo "All of '$(echo ${DEPENDENCIES[@]})' are needed to run $0"
+			exit 1
+		fi
+	done
+	[ -n "$DRY_RUN" ] && echo "Dependencies: '$(echo ${DEPENDENCIES[@]})' are installed on the system OK"
+}
+check_dependencies
+
+[ -z "$THRESHOLD" ] && THRESHOLD=90
+DISK_USAGE=$(df / --output=pcent | grep --only-matching --extended-regexp '[0-9]{2,3}')
+
+if [ "${DISK_USAGE}" -gt "$THRESHOLD" ]; then
+	notify-send "Root partition almost full" "root '/' partition is used at ${DISK_USAGE}! \n You should clear caches 'sudo pacman -Scc' for example" --urgency critical
+fi
