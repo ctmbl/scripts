@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# parse the arguments
+OPTIONS=$(getopt -o hc --long help,check -n 'disk_usage' -- "$@")
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+eval set -- "$OPTIONS"
+
 DEPENDENCIES=(
 	notify-send
 	df
@@ -67,6 +72,7 @@ main () {
 	#
 	# TODO.
 	#
+
 	check_dependencies
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
