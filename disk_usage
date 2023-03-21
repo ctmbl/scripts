@@ -4,6 +4,7 @@ DEPENDENCIES=(
 	notify-send
 	df
 )
+[ -z "$THRESHOLD" ] && THRESHOLD=90
 
 check_dependencies () {
 	for package in ${DEPENDENCIES[@]}; do
@@ -12,13 +13,79 @@ check_dependencies () {
 			exit 1
 		fi
 	done
-	[ -n "$DRY_RUN" ] && echo "Dependencies: '$(echo ${DEPENDENCIES[@]})' are installed on the system OK"
 }
-check_dependencies
 
-[ -z "$THRESHOLD" ] && THRESHOLD=90
-DISK_USAGE=$(df / --output=pcent | grep --only-matching --extended-regexp '[0-9]{2,3}')
+check_root_partition_usage () {
+	local disk_usage=$1
 
-if [ "${DISK_USAGE}" -gt "$THRESHOLD" ]; then
-	notify-send "Root partition almost full" "root '/' partition is used at ${DISK_USAGE}! \n You should clear caches 'sudo pacman -Scc' for example" --urgency critical
-fi
+	if [ "$disk_usage" -gt "$THRESHOLD" ]; then
+		notify-send "Root partition almost full" "root '/' partition is used at ${DISK_USAGE}! \n You should clear caches 'sudo pacman -Scc' for example" --urgency critical
+	fi
+}
+
+usage () {
+	 #
+	 # the usage function.
+	 #
+	 echo "Usage: disk_usage [-hc]"
+	 echo "Type -h or --help for the full help."
+	 exit 0
+}
+
+
+help () {
+	 #
+	 # the help function.
+	 #
+	 echo "disk_usage:"
+	 echo "     a script to check the root partition usage and throw appropriate notifications."
+	 echo "     dependencies are automatically checked"
+	 echo ""
+	 echo '     *TESTED on MANJARO*'
+	 echo "     run \`sudo systemctl enable cronie\` to activate the \`cron\` daemon if not already done, then"
+	 echo "     add \`* * * * * DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=<address> /path/to/disk_usage --check\`"
+	 echo "     to the \`cron\` table with \`crontab -e\` and restart the \`cron\` daemon with"
+	 echo "     \`sudo systemctl restart cronie\`. The address can be found with \`echo \$DBUS_SESSION_BUS_ADDRESS\`."
+	 echo ""
+	 echo "Usage:"
+	 echo "     disk_usage [-hc]"
+	 echo ""
+	 echo "Switches:"
+	 echo "     -h/--help             shows this help."
+	 echo "     -c/--check            check the root partition usage and throw a notification if critical."
+	 echo ""
+	 echo "Environment variables:"
+	 echo "     THRESHOLD             the partition usage threshold to trigger the notification"
+	 echo ""
+	 echo "Dependencies:"
+	 echo "     notify-send"
+	 exit 0
+}
+
+
+main () {
+	#
+	# TODO.
+	#
+	check_dependencies
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-h | --help )   help ;;
+			-c | --check )  ACTION="check"; shift 1 ;;
+			-- ) shift; break ;;
+			* ) break ;;
+		esac
+	done
+
+	DISK_USAGE=$(df / --output=pcent | grep --only-matching --extended-regexp '[0-9]{2,3}')
+
+	# an action is required
+	[ -z "$ACTION" ] && usage
+	case "$ACTION" in
+		check ) check_root_partition_usage "$DISK_USAGE" ;;
+		* ) echo "an error occured (got unexpected '$ACTION')"; exit 1 ;;
+	esac
+}
+
+
+main "$@"
